@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>TOKAI SHIP BATTLE</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#061827;color:#eef8ff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}#game{position:fixed;inset:0}canvas{display:block}#hud{position:fixed;inset:0;pointer-events:none}.top{display:flex;justify-content:space-between;gap:8px;padding:12px}.panel{background:#061827cc;border:1px solid #7abbd477;border-radius:12px;padding:9px 12px;backdrop-filter:blur(8px);font-size:13px}.title{font-weight:900;letter-spacing:.12em;font-size:17px}.small{font-size:11px;color:#b9d7e8}.bar{height:7px;background:#18394c;border-radius:9px;overflow:hidden;margin-top:5px}.fill{height:100%;background:#46d6c6;width:100%}#center{position:absolute;top:68px;left:50%;transform:translateX(-50%);text-align:center;text-shadow:0 2px 8px #001}#message{font-size:14px;font-weight:700}#controls{position:absolute;bottom:14px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:end;gap:10px}.cluster{display:flex;gap:7px;align-items:end;pointer-events:auto}.btn{border:1px solid #8ac5dc88;background:#09283bdc;color:white;border-radius:14px;min-width:52px;min-height:48px;padding:8px;font-weight:700;touch-action:none}.btn:active,.btn.active{background:#167b8d}.wide{min-width:74px}.stick{display:grid;grid-template-columns:repeat(3,43px);grid-template-rows:repeat(2,42px);gap:4px}.stick button{min-width:0;min-height:0;padding:0;font-size:20px}#menu{position:fixed;inset:0;background:linear-gradient(135deg,#061827f2,#0b4561eF);display:flex;align-items:center;justify-content:center;padding:18px;z-index:4;overflow:auto}#menu.hidden{display:none}.card{width:min(560px,100%);background:#09283beF;border:1px solid #73b7d477;border-radius:22px;padding:22px;box-shadow:0 20px 80px #0008}.card h1{font-size:clamp(27px,6vw,42px);margin:0 0 4px;letter-spacing:.08em}.card p{color:#c4dce8}.field{display:block;margin:12px 0 5px;color:#c4e4f1;font-size:13px}select{width:100%;padding:12px;border-radius:10px;background:#061c2b;color:white;border:1px solid #477b91;font-size:15px}.start{width:100%;padding:14px;border:0;border-radius:12px;background:#23b8ad;color:#00272a;font-size:17px;font-weight:900;margin-top:15px}.hint{font-size:12px;line-height:1.6;color:#b9d7e8}.tag{display:inline-block;background:#174b60;padding:4px 8px;border-radius:20px;margin:3px;font-size:11px}
+
+#radarWrap{position:absolute;right:12px;top:94px;width:142px;height:142px;border-radius:50%;background:#031a28c9;border:1px solid #69c7d9;box-shadow:0 0 18px #0a9eb555;pointer-events:none;overflow:hidden}
+#radar{width:100%;height:100%;display:block}
+.radarLabel{position:absolute;left:50%;top:5px;transform:translateX(-50%);font-size:9px;letter-spacing:.18em;color:#a9e8f4;text-shadow:0 1px 3px #001}
+@media(max-width:600px){#radarWrap{width:112px;height:112px;top:86px;right:9px}}
+@media(max-width:600px){.title{font-size:14px}.panel{padding:7px 9px}.btn{min-width:47px;min-height:46px}.stick{grid-template-columns:repeat(3,39px);grid-template-rows:repeat(2,38px)}#controls{bottom:max(12px,env(safe-area-inset-bottom))}.small{font-size:10px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+ <div class="top">
+  <div class="panel"><div class="title">TOKAI SHIP BATTLE</div><div class="small" id="shipLabel">橘丸</div></div>
+  <div class="panel" style="min-width:125px"><div>耐久力 <b id="hpText">100</b>%</div><div class="bar"><div class="fill" id="hp"></div></div><div class="small" id="speed">速力 0 kn</div></div>
+  <div class="panel"><div id="score">撃破 0 / 0</div><div class="small" id="modeLabel">CPU BATTLE</div></div>
+ </div>
+ <div id="center"><div class="panel" id="message">出港準備完了</div></div>
+ <div id="radarWrap"><canvas id="radar" width="280" height="280"></canvas><div class="radarLabel">RADAR · 1.5 NM</div></div>
+ <div id="controls">
+  <div class="cluster">
+   <div class="stick">
+    <span></span><button class="btn" data-key="up">▲</button><span></span>
+    <button class="btn" data-key="left">◀</button><button class="btn" data-key="down">▼</button><button class="btn" data-key="right">▶</button>
+   </div>
+  </div>
+  <div class="cluster">
+   <button class="btn wide" data-key="fire">⚓<br>攻撃</button>
+   <button class="btn wide" data-key="boost">加速<br>＋</button>
+   <button class="btn wide" data-key="brake">減速<br>－</button>
+   <button class="btn wide" onclick="openMenu()">メニュー</button>
+  </div>
+ </div>
+</div>
+<div id="menu">
+ <div class="card">
+  <h1>TOKAI SHIP BATTLE</h1><div class="small">3D OCEAN COMBAT SIMULATOR</div>
+  <p>実在船をモデルにした、架空の海上バトル＆操船ゲーム。</p>
+  <div><span class="tag">3D海上フィールド</span><span class="tag">CPU対戦</span><span class="tag">スマホ・PC対応</span><span class="tag">レース / 追跡 / バトル</span></div>
+  <label class="field">自艦を選択</label><select id="ship">
+   <option value="橘丸">橘丸（東海汽船）</option><option value="さるびあ丸">さるびあ丸（東海汽船）</option><option value="セブンアイランド愛">セブンアイランド愛（ジェット船）</option><option value="セブンアイランド友">セブンアイランド友（ジェット船）</option><option value="セブンアイランド大漁">セブンアイランド大漁（ジェット船）</option><option value="セブンアイランド結">セブンアイランド結（ジェット船）</option><option value="もがみ">もがみ（護衛艦）</option><option value="あきづき">あきづき（護衛艦）</option><option value="いずも">いずも（護衛艦）</option><option value="コンテナ船">コンテナ船（貨物船クラス）</option><option value="大型タンカー">大型タンカー</option><option value="タグボート">タグボート</option>
+  </select>
+  <label class="field">ゲームモード</label><select id="mode"><option value="battle">海戦バトル（架空兵装）</option><option value="race">レース</option><option value="chase">追跡・逃走</option><option value="ram">操船テクニック対決</option></select>
+  <label class="field">対戦相手</label><select id="enemy"><option value="さるびあ丸">さるびあ丸</option><option value="橘丸">橘丸</option><option value="もがみ">もがみ</option><option value="あきづき">あきづき</option><option value="コンテナ船">コンテナ船</option><option value="大型タンカー">大型タンカー</option><option value="タグボート">タグボート</option></select>
+  <button class="start" onclick="startGame()">出港・ゲーム開始</button>
+  <p class="hint">操作：▲加速 / ▼減速 / ◀▶旋回 / 攻撃。PCは矢印キー・スペースキーでも操作できます。オンライン対戦はサーバー接続が必要なため、この配布版では未接続です。</p>
+ </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+let scene,camera,renderer,clock,player,enemy,ships=[],bullets=[],keys={},running=false,heading=0,speed=0,hp=100,score=0,mode='battle',playerSpec,enemySpec,lastShot=0,finish=false;
+const specs={
+'橘丸':{color:0xf4c542,length:13,width:2.4,max:19,hp:120,turn:.48},
+'さるびあ丸':{color:0xf2f0df,length:13.2,width:2.5,max:20,hp:125,turn:.5},
+'セブンアイランド愛':{color:0xe8e8e8,length:9,width:1.8,max:38,hp:75,turn:.8},
+'セブンアイランド友':{color:0xe8e8e8,length:9,width:1.8,max:38,hp:75,turn:.8},
+'セブンアイランド大漁':{color:0xe8e8e8,length:9,width:1.8,max:38,hp:75,turn:.8},
+'セブンアイランド結':{color:0xe8e8e8,length:9,width:1.8,max:38,hp:75,turn:.8},
+'もがみ':{color:0x647c82,length:11,width:1.6,max:30,hp:110,turn:.65},
+'あきづき':{color:0x687b83,length:12,width:1.8,max:30,hp:120,turn:.58},
+'いずも':{color:0x65777d,length:17,width:3,max:28,hp:180,turn:.35},
+'コンテナ船':{color:0x9b6b48,length:18,width:3,max:16,hp:190,turn:.25},
+'大型タンカー':{color:0x7c9a82,length:20,width:4,max:14,hp:230,turn:.2},
+'タグボート':{color:0xe45b36,length:6,width:1.8,max:17,hp:65,turn:.9}
+};
+function spec(n){return specs[n]||specs['橘丸']}
+function makeShip(name,x,z,rot=0){
+ const s=spec(name),g=new THREE.Group();let hull=new THREE.Mesh(new THREE.BoxGeometry(s.width*.72,.55,s.length),new THREE.MeshStandardMaterial({color:s.color,roughness:.55}));hull.position.y=.35;g.add(hull);
+ let deck=new THREE.Mesh(new THREE.BoxGeometry(s.width*.65,.35,s.length*.66),new THREE.MeshStandardMaterial({color:0xe4e8e5}));deck.position.set(0,.72,.15);g.add(deck);
+ let bridge=new THREE.Mesh(new THREE.BoxGeometry(s.width*.52,1.05,s.length*.22),new THREE.MeshStandardMaterial({color:0xf2f3ed}));bridge.position.set(0,1.35,-s.length*.22);g.add(bridge);
+ let windows=new THREE.Mesh(new THREE.BoxGeometry(s.width*.54,.25,s.length*.08),new THREE.MeshStandardMaterial({color:0x18394a,metalness:.25,roughness:.2}));windows.position.set(0,1.65,-s.length*.22);g.add(windows);
+ let bow=new THREE.Mesh(new THREE.ConeGeometry(s.width*.36,s.length*.18,4),new THREE.MeshStandardMaterial({color:s.color}));bow.rotation.x=Math.PI/2;bow.position.set(0,.35,s.length*.55);g.add(bow);
+ for(let i=0;i<3;i++){let box=new THREE.Mesh(new THREE.BoxGeometry(s.width*.55,.5,s.length*.09),new THREE.MeshStandardMaterial({color:[0xc64d36,0x3e7391,0xd6bd79][i]}));box.position.set(0,.98,-s.length*.12+i*s.length*.16);g.add(box)}
+ g.position.set(x,0,z);g.rotation.y=rot;g.userData={name,s};scene.add(g);return g;
+}
+function init(){
+ scene=new THREE.Scene();scene.background=new THREE.Color(0x8bc9e5);scene.fog=new THREE.Fog(0x8bc9e5,90,260);
+ camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,500);
+ renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;document.getElementById('game').appendChild(renderer.domElement);
+ scene.add(new THREE.HemisphereLight(0xcceeff,0x24445b,2));let sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-40,80,30);scene.add(sun);
+ let water=new THREE.Mesh(new THREE.PlaneGeometry(500,500,80,80),new THREE.MeshStandardMaterial({color:0x087ca5,roughness:.38,metalness:.25}));water.rotation.x=-Math.PI/2;water.position.y=-.15;scene.add(water);
+ for(let i=0;i<150;i++){let w=new THREE.Mesh(new THREE.BoxGeometry(Math.random()*2+.5,.025,Math.random()*3+.5),new THREE.MeshBasicMaterial({color:0x8bd7e8,transparent:true,opacity:.23}));w.position.set((Math.random()-.5)*300,.01,(Math.random()-.5)*300);scene.add(w)}
+ let grid=new THREE.GridHelper(400,40,0x70b9cb,0x32829b);grid.position.y=-.13;grid.material.transparent=true;grid.material.opacity=.12;scene.add(grid);
+ clock=new THREE.Clock();addEventListener('resize',resize);animate();
+}
+function resize(){camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)}
+function startGame(){
+ if(!renderer)init();mode=document.getElementById('mode').value;let pn=document.getElementById('ship').value,en=document.getElementById('enemy').value;playerSpec=spec(pn);enemySpec=spec(en);
+ if(player){scene.remove(player);scene.remove(enemy);bullets.forEach(b=>scene.remove(b));bullets=[]}
+ player=makeShip(pn,0,0,0);enemy=makeShip(en,0,-65,Math.PI);heading=0;speed=0;hp=100;score=0;finish=false;running=true;
+ document.getElementById('shipLabel').textContent=pn;document.getElementById('modeLabel').textContent=mode.toUpperCase();document.getElementById('menu').classList.add('hidden');document.getElementById('message').textContent=mode==='race'?'敵艦より先にゴールを目指せ！':'敵艦を追え！';
+}
+function openMenu(){running=false;document.getElementById('menu').classList.remove('hidden')}
+function fire(){
+ if(!running||!player)return;let t=performance.now();if(t-lastShot<550)return;lastShot=t;
+ let b=new THREE.Mesh(new THREE.SphereGeometry(.45,10,8),new THREE.MeshBasicMaterial({color:0xffdc72}));let dir=new THREE.Vector3(Math.sin(heading),0,Math.cos(heading));b.position.copy(player.position).add(dir.clone().multiplyScalar(playerSpec.length*.65));b.position.y=1.2;b.userData={v:dir.multiplyScalar(1.6+speed*.12),life:95};scene.add(b);bullets.push(b);
+}
+function update(dt){
+ if(!running)return;
+ let s=playerSpec;
+ if(keys.up)speed=Math.min(s.max,speed+dt*8);if(keys.down)speed=Math.max(-s.max*.25,speed-dt*11);if(keys.boost)speed=Math.min(s.max*1.18,speed+dt*14);if(keys.brake)speed=Math.max(0,speed-dt*15);
+ if(keys.left)heading+=dt*s.turn*(.4+Math.abs(speed)/s.max);if(keys.right)heading-=dt*s.turn*(.4+Math.abs(speed)/s.max);
+ player.rotation.y=heading;player.position.x+=Math.sin(heading)*speed*dt*.8;player.position.z+=Math.cos(heading)*speed*dt*.8;
+ let es=enemySpec;let dx=player.position.x-enemy.position.x,dz=player.position.z-enemy.position.z,dist=Math.hypot(dx,dz);let target=Math.atan2(dx,dz);let diff=Math.atan2(Math.sin(target-enemy.rotation.y),Math.cos(target-enemy.rotation.y));enemy.rotation.y+=Math.sign(diff)*Math.min(Math.abs(diff),dt*.35);enemy.position.x+=Math.sin(enemy.rotation.y)*es.max*.22*dt;enemy.position.z+=Math.cos(enemy.rotation.y)*es.max*.22*dt;
+ if(mode==='battle'&&dist<65&&Math.random()<dt*.22){hp=Math.max(0,hp-1.8);if(hp<=0){running=false;document.getElementById('message').textContent='自艦が航行不能！ メニューから再挑戦';}}
+ if(mode==='ram'&&dist<8){hp=Math.max(0,hp-12);enemy.position.z-=Math.cos(enemy.rotation.y)*4}
+ for(let i=bullets.length-1;i>=0;i--){let b=bullets[i];b.position.add(b.userData.v.clone().multiplyScalar(dt*30));b.userData.life-=dt*30;if(b.position.distanceTo(enemy.position)<5){scene.remove(b);bullets.splice(i,1);score++;enemy.position.x+=(Math.random()-.5)*7;enemy.position.z-=10;if(score>=5){running=false;document.getElementById('message').textContent='勝利！ 敵艦を撃破！';}}else if(b.userData.life<=0){scene.remove(b);bullets.splice(i,1)}}
+ if(mode==='race'&&player.position.z<-230){running=false;document.getElementById('message').textContent='ゴール！ レース完走！'}
+ camera.position.set(player.position.x-Math.sin(heading)*22,16,player.position.z-Math.cos(heading)*22);camera.lookAt(player.position.x,1,player.position.z+5);
+ document.getElementById('hpText').textContent=Math.round(hp);document.getElementById('hp').style.width=hp+'%';document.getElementById('speed').textContent='速力 '+Math.max(0,Math.round(speed))+' kn';document.getElementById('score').textContent='命中 '+score+' / 5';
+}
+
+function drawRadar(){
+ const c=document.getElementById('radar');if(!c||!player)return;const ctx=c.getContext('2d'),w=c.width,h=c.height,cx=w/2,cy=h/2;
+ ctx.clearRect(0,0,w,h);
+ ctx.strokeStyle='rgba(105,220,230,.35)';ctx.lineWidth=1;
+ [42,84,126].forEach(r=>{ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke()});
+ ctx.beginPath();ctx.moveTo(cx,8);ctx.lineTo(cx,h-8);ctx.moveTo(8,cy);ctx.lineTo(w-8,cy);ctx.stroke();
+ // Radar sweep
+ const a=(performance.now()*.0012)%(Math.PI*2);ctx.save();ctx.translate(cx,cy);ctx.rotate(a);ctx.fillStyle='rgba(42,230,190,.14)';ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,132,-.22,.02);ctx.closePath();ctx.fill();ctx.restore();
+ function blip(obj,color,size){let dx=obj.position.x-player.position.x,dz=obj.position.z-player.position.z;let ang=-heading;let rx=dx*Math.cos(ang)-dz*Math.sin(ang),rz=dx*Math.sin(ang)+dz*Math.cos(ang);let scale=2.0;let x=cx+rx*scale,y=cy+rz*scale;if(Math.hypot(x-cx,y-cy)<128){ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.beginPath();ctx.arc(x,y,size,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0}}
+ blip(enemy,'#ff665f',7);
+ ctx.fillStyle='#65f5dc';ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle='rgba(101,245,220,.9)';ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.sin(heading)*18,cy+Math.cos(heading)*18);ctx.stroke();
+}
+function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.04);update(dt);if(running&&player){drawRadar();let t=performance.now()*.0003;scene.children.forEach(o=>{if(o.geometry&&o.geometry.type==='PlaneGeometry'){} });}renderer.render(scene,camera)}
+document.querySelectorAll('[data-key]').forEach(b=>{let k=b.dataset.key;b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true;b.classList.add('active')});['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>{keys[k]=false;b.classList.remove('active')}))});
+addEventListener('keydown',e=>{let m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',Space:'fire'};let k=m[e.code];if(k){e.preventDefault();if(k==='fire')fire();else keys[k]=true}});addEventListener('keyup',e=>{let m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'};if(m[e.code])keys[m[e.code]]=false});
+document.querySelector('[data-key="fire"]').addEventListener('pointerdown',fire);
+init();
+</script>
+</body></html>
